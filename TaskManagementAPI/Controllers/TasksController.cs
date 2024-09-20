@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using TaskManagementAPI.Core.Models;
 using TaskManagementAPI.Data.Repositories;
+using TaskManagementAPI.Models;
 
 namespace TaskManagementAPI.Controllers
 {
@@ -9,20 +11,24 @@ namespace TaskManagementAPI.Controllers
     public class TasksController : ControllerBase
     {
         private readonly ITaskRepository _repository;
+        private readonly IMapper _mapper;
 
-        public TasksController(ITaskRepository repository)
+        public TasksController(ITaskRepository repository, IMapper mapper)
         {
             _repository = repository;
+            _mapper = mapper;
         }
-        // GET: api/tasks
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Task>>> GetTasks()
+        public async Task<ActionResult<IEnumerable<TaskModel>>> GetTasks(string sortBy = "Id", string filter = null, int pageNumber = 1, int pageSize = 10)
         {
-            return Ok(await _repository.GetAllTasksAsync());
+            var tasks = await _repository.GetAllTasksAsync(sortBy, filter, pageNumber, pageSize);
+            var taskModels = _mapper.Map<IEnumerable<TaskModel>>(tasks);
+
+            return Ok(taskModels);
         }
         // GET: api/tasks/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Task>> GetTask(int id)
+        public async Task<ActionResult<TaskModel>> GetTask(int id)
         {
             var task = await _repository.GetTaskByIdAsync(id);
             if (task == null)
@@ -30,32 +36,53 @@ namespace TaskManagementAPI.Controllers
                 return NotFound();
             }
 
-            return Ok(task);
+            var taskModel = _mapper.Map<TaskModel>(task);
+            return Ok(taskModel);
         }
+
         // POST: api/tasks
         [HttpPost]
-        public async Task<ActionResult<Task>> PostTask(TB_Task task)
+        public async Task<ActionResult<TaskModel>> PostTask(TaskModel taskModel)
         {
+            var task = _mapper.Map<TB_Task>(taskModel);
             await _repository.AddTaskAsync(task);
-            return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
+            taskModel.Id = task.Id;
+
+            return CreatedAtAction(nameof(GetTask), new { id = taskModel.Id }, taskModel);
         }
+
         // PUT: api/tasks/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutTask(int id, TB_Task task)
+        public async Task<IActionResult> PutTask(int id, TaskModel taskModel)
         {
-            if (id != task.Id)
+            if (id != taskModel.Id)
             {
                 return BadRequest();
             }
 
-            await _repository.UpdateTaskAsync(task);
+            var existingTask = await _repository.GetTaskByIdAsync(id);
+            if (existingTask == null)
+            {
+                return NotFound();
+            }
+
+            _mapper.Map(taskModel, existingTask);
+
+            await _repository.UpdateTaskAsync(existingTask);
 
             return NoContent();
         }
+
         // DELETE: api/tasks/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
+            var existingTask = await _repository.GetTaskByIdAsync(id);
+            if (existingTask == null)
+            {
+                return NotFound();
+            }
+
             await _repository.DeleteTaskAsync(id);
             return NoContent();
         }

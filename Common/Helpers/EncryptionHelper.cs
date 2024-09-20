@@ -10,7 +10,7 @@ namespace Common.Helpers
     public static class EncryptionHelper
     {
         private static readonly byte[] Key = Encoding.UTF8.GetBytes("8080808080808080");
-        private static readonly byte[] IV = Encoding.UTF8.GetBytes("80808080");
+        private static readonly byte[] IV = Encoding.UTF8.GetBytes("8080808080808080");
 
         public static string Encrypt(string plainText)
         {

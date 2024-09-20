@@ -26,7 +26,12 @@ namespace TaskManagementAPI.Middleware
                     return;
                 }
             }
-
+            else
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Please Add Token");
+                return;
+            }
             await _next(context);
         }
     }
